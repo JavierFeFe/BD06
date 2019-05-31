@@ -57,23 +57,36 @@ Actividad 2.
 Queremos controlar algunas restricciones a la hora de trabajar con agentes:  
   
 El usuario y la clave de un agente no pueden ser iguales.  
-```SQL
-```
 La habilidad de un agente debe estar comprendida entre 0 y 9 (ambos inclusive).  
-```SQL
-```
 La categoría de un agente sólo puede ser igual a 0, 1 o 2.  
-```SQL
-```
 Si un agente pertenece a una oficina directamente, su categoría debe ser igual 2, si un agente no pertenece a una oficina directamente, su categoría no puede ser 2.  
-```SQL
-```
 No puede haber agentes que no pertenezcan a una oficina o a una familia.  
-```SQL
-```
 No puede haber agentes que pertenezcan a una oficina y a una familia a la vez.  
-```SQL
-```
 Debes crear un disparador para asegurar estas restricciones. El disparador deberá lanzar todos los errores que se puedan producir en su ejecución mediante errores que identifiquen con un mensaje adecuado por qué se ha producido dicho error.  
 ```SQL
+CREATE OR REPLACE TRIGGER controla_agentes
+BEFORE INSERT OR UPDATE OF USUARIO, CLAVE, CATEGORIA, FAMILIA, OFICINA  ON AGENTES
+FOR EACH ROW 
+BEGIN 
+  IF :new.usuario = :new.clave THEN 
+    raise_application_error(-20000, 'El usuario y contraseña no deben coincidir'); 
+  END IF; 
+  IF :new.habilidad < 0 OR :new.habilidad >9 THEN
+    raise_application_error(-20000, 'La habilidad de un agente debe estar entre 0 y 9'); 
+  END IF;
+  IF :new.categoria < 0 OR :new.categoria >2 THEN
+    raise_application_error(-20000, 'La categoría de un agente debe estar entre 0 y 2'); 
+  END IF;
+  IF :new.categoria != 2 AND :new.oficina IS NOT NULL THEN
+    raise_application_error(-20000, 'Los agentes asignados a una oficina deben pertenecer a la categoría 2'); 
+  ELSIF :new.oficina IS NULL AND :new.categoria = 2 THEN
+    raise_application_error(-20000, 'Los agentes sin oficina asignada no deben pertenecer a la categoría 2');
+  END IF;
+  IF :new.familia IS NULL AND :new.oficina IS NULL THEN
+    raise_application_error(-20000, 'Todos los agentes deben pertenecer a una familia o a una oficina'); 
+  ELSIF :new.famila IS NOT NULL AND :new.oficina IS NOT NULL THEN
+    raise_application_error(-20000, 'Un agente no puede pertencer a una familia y a una oficina a la vez'); 
+  END IF;
+
+END;
 ```
